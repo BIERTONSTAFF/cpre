@@ -1,0 +1,31 @@
+#include <stdio.h>
+
+class Fruit {
+    int citrus;
+}
+
+class Apple +Fruit {
+    char *colour;
+
+    void (*eat)();
+    void (*isCitrus)();
+}
+
+void Apple::eat() {
+    free(self);
+    printf("Apple was eaten\n");
+}
+
+void Apple::isCitrus() {
+    printf("Is cutrus: %d\n", self->super.citrus);
+}
+
+int main() {
+    Apple *apple = new Apple("Red", Apple_eat, Apple_isCitrus, { .citrus = 0 });
+
+    apple->isCitrus();
+
+    printf("Apple colour is %s", apple->colour);
+
+    return 0;
+}

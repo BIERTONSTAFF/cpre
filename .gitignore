@@ -1,0 +1,4 @@
+target/
+Cargo.lock
+pre.c
+program.exe
