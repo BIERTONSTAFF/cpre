@@ -68,7 +68,7 @@ impl Parser {
 
             bounds.push((i, i + offset, expr));
 
-            dbg!(method.clone(), args);
+            //dbg!(method.clone(), args);
         }
 
         self.insert(bounds);
@@ -125,7 +125,7 @@ impl Parser {
 
             self.parse_call(name.clone());
 
-            dbg!(ty.chars().rev().collect::<String>(), name, params, body);
+            //dbg!(ty.chars().rev().collect::<String>(), name, params, body);
         }
 
         self.insert(bounds);
@@ -171,7 +171,8 @@ impl Parser {
 
             bounds.push((i, i + offset, expr));
 
-            dbg!(class, body);
+            //dbg!(class, body);
+            dbg!(&self.classes);
         }
 
         self.insert(bounds);
@@ -209,12 +210,13 @@ impl Parser {
             });
             self.parse_method(name.clone().trim().to_string());
 
-            dbg!(name, body);
+            //dbg!(name, body);
         }
 
         self.insert(bounds);
 
-        self.src
-            .insert_str(0, "#include \"src/c/include/class.h\"\n");
+        // self.src
+        //     .insert_str(0, "#include \"src/c/include/class.h\"\n");
+        self.src.insert_str(0, include_str!("c/include/class.h"))
     }
 }
