@@ -147,9 +147,15 @@ impl Parser {
 
             if let Some(class) = self.classes.iter().find(|c| c.name == class) {
                 let body_start: String = body.chars().take_while(|&c| c != '{').collect();
-                let body_end: String = body.chars().rev().take_while(|&c| c != ',').collect();
+                let body_end: String = match body.contains("{") {
+                    true => body.chars().rev().take_while(|&c| c != ',').collect(),
+                    false => String::new(),
+                };
 
-                let mut methods = String::new();
+                let mut methods = match body.contains(',') {
+                    true => String::new(),
+                    false => ", ".to_string(),
+                };
 
                 class.methods.iter().enumerate().for_each(|(i, m)| {
                     methods.push_str(&format!("{}_{},", class.name, m));
