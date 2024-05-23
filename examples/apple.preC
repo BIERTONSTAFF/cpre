@@ -11,17 +11,17 @@ class Apple +Fruit {
     void (*isCitrus)();
 }
 
-void Apple::eat() {
+void Apple::eat(int x, float y) {
     free(self);
     printf("Apple was eaten\n");
 }
 
 void Apple::isCitrus() {
-    printf("Is cutrus: %d\n", self->super.citrus);
+    printf("Is cutrus: %d\n", super.citrus);
 }
 
 int main() {
-    Apple *apple = new Apple("Red", Apple_eat, Apple_isCitrus, { .citrus = 0 });
+    Apple *apple = new Apple("Red", { .citrus = 0 });
 
     apple->isCitrus();
 
