@@ -6,6 +6,7 @@ struct Class {
 
 pub struct Parser {
     pub src: String,
+    offset: usize,
     classes: Vec<Class>,
 }
 
@@ -13,19 +14,24 @@ impl Parser {
     pub fn new(src: String) -> Self {
         Self {
             src,
+            offset: 0,
             classes: vec![],
         }
     }
 
-    fn collect_until<F>(&self, start: usize, n: usize, condition: F) -> String
+    fn collect_until<F>(&mut self, start: usize, a: usize, condition: F) -> String
     where
         F: Fn(char) -> bool,
     {
-        self.src[start..]
+        let res: String = self.src[start..]
             .chars()
-            .skip(n)
+            .skip(self.offset)
             .take_while(|&c| !condition(c))
-            .collect()
+            .collect();
+
+        self.offset += res.len() + a;
+
+        res
     }
 
     fn insert(&mut self, bounds: Vec<(usize, usize, String)>) {
@@ -43,7 +49,7 @@ impl Parser {
         let mut bounds: Vec<(usize, usize, String)> = vec![];
 
         for (i, expr) in self.src.clone().match_indices(&format!("->{}", method)) {
-            let mut offset: usize = expr.len() + 1;
+            self.offset = expr.len() + 1;
 
             let var: String = self.src[..i]
                 .chars()
@@ -51,9 +57,7 @@ impl Parser {
                 .take_while(|&c| c != ' ' && c != '\n' && c != ',')
                 .collect();
 
-            let mut args: String = self.collect_until(i, offset, |c| c == ')');
-
-            offset += args.len() + 1;
+            let mut args: String = self.collect_until(i, 1, |c| c == ')');
 
             if !args.is_empty() {
                 args.insert_str(0, ", ");
@@ -66,7 +70,7 @@ impl Parser {
                 args
             );
 
-            bounds.push((i, i + offset, expr));
+            bounds.push((i, i + self.offset, expr));
 
             //dbg!(method.clone(), args);
         }
@@ -78,25 +82,16 @@ impl Parser {
         let mut bounds: Vec<(usize, usize, String)> = vec![];
 
         for (i, expr) in self.src.clone().match_indices(&format!("{}::", class)) {
-            let mut offset: usize = expr.len();
+            self.offset = expr.len();
 
             let ty: String = self.src[..i]
                 .chars()
                 .rev()
                 .take_while(|&c| c != '\n')
                 .collect();
-
-            let name: String = self.collect_until(i, offset, |c| c == '(');
-
-            offset += name.len() + 1;
-
-            let params: String = self.collect_until(i, offset, |c| c == ')');
-
-            offset += params.len() + 3;
-
-            let mut body: String = self.collect_until(i, offset, |c| c == '}');
-
-            offset += body.len() + 1;
+            let name: String = self.collect_until(i, 1, |c| c == '(');
+            let params: String = self.collect_until(i, 3, |c| c == ')');
+            let mut body: String = self.collect_until(i, 1, |c| c == '}');
 
             body = body.replace("super", "self->super");
 
@@ -109,7 +104,7 @@ impl Parser {
                 body
             );
 
-            bounds.push((i - ty.len(), i + offset, expr));
+            bounds.push((i - ty.len(), i + self.offset, expr));
 
             if let Some(class) = self.classes.iter_mut().find(|c| c.name == class) {
                 if !class.methods.contains(&name) {
@@ -135,15 +130,10 @@ impl Parser {
         let mut bounds: Vec<(usize, usize, String)> = vec![];
 
         for (i, op) in self.src.clone().match_indices("new") {
-            let mut offset: usize = op.len() + 1;
+            self.offset = op.len() + 1;
 
-            let class: String = self.collect_until(i, offset, |c| c == '(');
-
-            offset += class.len() + 1;
-
-            let mut body: String = self.collect_until(i, offset, |c| c == ')');
-
-            offset += body.len() + 2;
+            let class: String = self.collect_until(i, 1, |c| c == '(');
+            let mut body: String = self.collect_until(i, 2, |c| c == ')');
 
             if let Some(class) = self.classes.iter().find(|c| c.name == class) {
                 let body_start: String = body.chars().take_while(|&c| c != '{').collect();
@@ -175,7 +165,7 @@ impl Parser {
 
             let expr = format!(include_str!("tmpl/new.tmpl"), class, body);
 
-            bounds.push((i, i + offset, expr));
+            bounds.push((i, i + self.offset, expr));
 
             //dbg!(class, body);
             dbg!(&self.classes);
@@ -188,19 +178,11 @@ impl Parser {
         let mut bounds: Vec<(usize, usize, String)> = vec![];
 
         for (i, op) in self.src.clone().match_indices("class") {
-            let mut offset: usize = op.len() + 1;
+            self.offset = op.len() + 1;
 
-            let name: String = self.collect_until(i, offset, |c| c == ' ' || c == '{');
-
-            offset += name.len() + 1;
-
-            let parent: String = self.collect_until(i, offset, |c| c == '{');
-
-            offset += parent.len() + 1;
-
-            let mut body: String = self.collect_until(i, offset, |c| c == '}');
-
-            offset += body.len() + 1;
+            let name: String = self.collect_until(i, 1, |c| c == ' ' || c == '{');
+            let parent: String = self.collect_until(i, 1, |c| c == '{');
+            let mut body: String = self.collect_until(i, 1, |c| c == '}');
 
             if !parent.trim().is_empty() {
                 body.push_str(&format!("\n\t{} super;\n", parent.trim_matches('+').trim()));
@@ -208,7 +190,7 @@ impl Parser {
 
             let expr = format!(include_str!("tmpl/class.tmpl"), name, &body[1..]);
 
-            bounds.push((i, i + offset, expr));
+            bounds.push((i, i + self.offset, expr));
 
             self.classes.push(Class {
                 name: name.clone(),
@@ -220,9 +202,6 @@ impl Parser {
         }
 
         self.insert(bounds);
-
-        // self.src
-        //     .insert_str(0, "#include \"src/c/include/class.h\"\n");
         self.src.insert_str(0, include_str!("c/include/class.h"))
     }
 }
